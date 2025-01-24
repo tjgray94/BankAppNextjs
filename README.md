@@ -1,5 +1,5 @@
 # BankAppNextjs
-BankApp is a Next.js based user interface for managing banking functionalities, such as creating accounts, logging in, viewing account balances, performing various transactions like deposits, withdrawals, and fund transfers. BankApp also has transaction logging to keep track of bank interactions. This project is developed with user experience in mind, ensuring smooth and responsive interactions. 
+BankApp is a Next.js based user application for managing banking functionalities, such as creating accounts, logging in, viewing account balances, performing various transactions like deposits, withdrawals, and fund transfers. BankApp also has transaction logging to keep track of bank interactions. This project is developed with user experience in mind, ensuring smooth and responsive interactions. 
 
 ### Features
 - **Account Creation**: Users can register by filling in their information and selecting account types.
