@@ -51,15 +51,6 @@ export async function PUT(request: NextRequest, { params }: { params: {userId: s
 			})
 		]);
 
-		// await prisma.transaction.create({
-		// 	data: {
-		// 			accountId: account.accountId,
-		// 			type: "DEPOSIT", // Ensure 'DEPOSIT' is a valid transaction type
-		// 			amount: parseFloat(amount),
-		// 			timestamp: new Date() // Logs the current time
-		// 	}
-		// });
-
 		return NextResponse.json({ message: "Transfer successful", updatedSourceAccount, updatedDestinationAccount });
 	} catch (error) {
 		console.error("Error processing transfer:", error);

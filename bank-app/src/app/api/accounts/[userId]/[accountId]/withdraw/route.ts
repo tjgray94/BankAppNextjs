@@ -33,15 +33,6 @@ export async function PUT(request: NextRequest, { params }: { params: {userId: s
 			data: { balance: { decrement: parseFloat(amount) } }
 		});
 
-		// await prisma.transaction.create({
-		// 	data: {
-		// 			accountId: account.accountId,
-		// 			type: "DEPOSIT", // Ensure 'DEPOSIT' is a valid transaction type
-		// 			amount: parseFloat(amount),
-		// 			timestamp: new Date() // Logs the current time
-		// 	}
-		// });
-
 		return NextResponse.json({ message: "Withdraw successful", updatedAccount });
 	} catch (error) {
 		console.error("Error processing withdraw:", error);

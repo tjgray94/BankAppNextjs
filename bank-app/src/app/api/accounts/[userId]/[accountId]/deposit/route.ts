@@ -29,16 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: {userId: s
 			data: { balance: { increment: parseFloat(amount) } }
 		});
 
-		const transaction = await prisma.transaction.create({
-			data: {
-				accountId: account.accountId,
-				type: "DEPOSIT", // Ensure 'DEPOSIT' is a valid transaction type
-				amount: parseFloat(amount),
-				timestamp: new Date().toISOString() // Logs the current time
-			}
-		});
-
-		return NextResponse.json({ message: "Deposit successful", updatedAccount, transaction });
+		return NextResponse.json({ message: "Deposit successful", updatedAccount });
 	} catch (error) {
 		console.error("Error processing deposit:", error);
     return NextResponse.json({ error: "An error occurred while processing the deposit." }, { status: 500 });
