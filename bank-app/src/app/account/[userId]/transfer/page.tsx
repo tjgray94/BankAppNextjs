@@ -10,9 +10,10 @@ interface Account {
   balance: number;
 }
 
-export default function Transfer({ params }: { params: { userId: string, accountId: string } }) {
+export default function Transfer({ params }: { params: Promise<{ userId: string, accountId: string }> }) {
 	const [accounts, setAccounts] = useState<Account[]>([]);
 	const [amount, setAmount] = useState('');
+  const [resolvedParams, setResolvedParams] = useState<{ userId: string; accountId: string } | null>(null);
 	const [transferDirection, setTransferDirection] = useState<'checkingToSavings' | 'savingsToChecking' | null>(null);
 	const [showTransactionPrompt, setShowTransactionPrompt] = useState(false);
 	const [showLogoutMessage, setShowLogoutMessage] = useState(false);
@@ -21,75 +22,80 @@ export default function Transfer({ params }: { params: { userId: string, account
 	useEffect(() => {
 		const fetchAccounts = async () => {
 			try {
-				const response = await axios.get<Account[]>(`/api/accounts/${params.userId}`);
+        const resolved = await params;
+				setResolvedParams(resolved);
+				const response = await axios.get<Account[]>(`/api/accounts/${resolved.userId}`);
 				setAccounts(response.data);
 			} catch (error) {
 				console.error('Error fetching accounts:', error);
 			}
 		}
 		fetchAccounts();
-	}, [params.userId]);
+	}, [params]);
 
 	const handleTransfer = async () => {
-		const transferAmount = parseFloat(amount);
-
-		if (!transferDirection || isNaN(transferAmount) || transferAmount <= 0) {
-      alert("Please select a transfer direction and enter a valid amount.");
+    if (!transferDirection) {
+      alert("Please select a transfer direction.");
       return;
     }
 
-		const sourceAccountType = transferDirection === 'checkingToSavings' ? 'CHECKING' : 'SAVINGS';
-    const destinationAccountType = transferDirection === 'checkingToSavings' ? 'SAVINGS' : 'CHECKING';
-
-		const sourceAccount = accounts.find(account => account.accountType === sourceAccountType);
-    const destinationAccount = accounts.find(account => account.accountType === destinationAccountType);
-
-		if (!sourceAccount || !destinationAccount) {
-      alert("Required accounts not found.");
-      return;
+    const transferAmount = parseFloat(amount);
+		if (isNaN(transferAmount) || transferAmount <= 0) {
+      alert("Please enter a valid transfer amount.");
     }
 
-		if (transferAmount > sourceAccount.balance) {
-      alert("Insufficient funds in the source account.");
-      return;
-    }
+    try {
+      const sourceAccountType = transferDirection === 'checkingToSavings' ? 'CHECKING' : 'SAVINGS';
+      const destinationAccountType = transferDirection === 'checkingToSavings' ? 'SAVINGS' : 'CHECKING';
+  
+      const sourceAccount = accounts.find(account => account.accountType === sourceAccountType);
+      const destinationAccount = accounts.find(account => account.accountType === destinationAccountType);
+  
+      if (!sourceAccount || !destinationAccount) {
+        alert("Required accounts not found.");
+        return;
+      }
+  
+      if (transferAmount > sourceAccount.balance) {
+        alert("Insufficient funds in the source account.");
+        return;
+      }
 
-		try {
-			const response = await axios.put(`/api/accounts/${params.userId}/transfer`, {
-				sourceAccountId: sourceAccount.accountId,
-				destinationAccountId: destinationAccount.accountId,
-				amount: transferAmount
-			});
-			
-			setAccounts(prev =>
-				prev.map(acc =>
-					acc.accountId === sourceAccount.accountId
-						? { ...acc, balance: acc.balance - transferAmount }
+      const response = await axios.put(`/api/accounts/${resolvedParams?.userId}/transfer`, {
+        sourceAccountId: sourceAccount.accountId,
+        destinationAccountId: destinationAccount.accountId,
+        amount: transferAmount
+      });
+      
+      setAccounts(prev =>
+        prev.map(acc =>
+          acc.accountId === sourceAccount.accountId
+            ? { ...acc, balance: acc.balance - transferAmount }
             : acc.accountId === destinationAccount.accountId
             ? { ...acc, balance: acc.balance + transferAmount }
             : acc
-				)
-			);
-			
-			const transactionData = {
-				type: 'TRANSFER',
-				sourceAccount: sourceAccount.accountType,
-				destinationAccount: destinationAccount.accountType, 
-				amount: transferAmount,
-				timestamp: new Date().toISOString()
-			};
-			
-			console.log("Transaction Data Being Sent:", transactionData);
-			
-			const createTransaction = await axios.post(`/api/accounts/${params.userId}/history`, transactionData);
-			
-			setAmount('');
-			alert('Transfer successful!');
-			setShowTransactionPrompt(true);
-		} catch (error) {
-			console.error('Error processing transfer:', error);
-			alert('Error processing transfer. Please try again.');
-		}
+        )
+      );
+      
+      const transactionData = {
+        type: 'TRANSFER',
+        sourceAccount: sourceAccount.accountType,
+        destinationAccount: destinationAccount.accountType, 
+        amount: transferAmount,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log("Transaction Data Being Sent:", transactionData);
+      
+      await axios.post(`/api/accounts/${resolvedParams?.userId}/history`, transactionData);
+      
+      setAmount('');
+      alert('Transfer successful!');
+      setShowTransactionPrompt(true);
+    } catch (error) {
+      console.error('Error processing transfer:', error);
+      alert('Error processing transfer. Please try again.');
+    }  
 	};
 
 	const logout = async () => {

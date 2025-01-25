@@ -3,14 +3,15 @@ import { AccountType, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest, { params }: { params: { userId: string } }) {
-	const userId = parseInt(params.userId, 10);
-	
-  if (isNaN(userId)) {
-		return NextResponse.json({ error: 'Invalid userId' }, { status: 400 });
-  }
-	
+export async function GET(request: NextRequest, context: { params: { userId: string } }) {
 	try {
+		const resolvedParams = await context.params;
+		const userId = parseInt(resolvedParams.userId, 10);
+		
+		if (isNaN(userId)) {
+			return NextResponse.json({ error: 'Invalid userId' }, { status: 400 });
+		}
+
 		// Fetch accounts associated with the user
 		const userAccounts = await prisma.account.findMany({
 			where: { userId },
@@ -36,14 +37,14 @@ export async function GET(request: NextRequest, { params }: { params: { userId: 
 	}
 }
 
-export async function POST(request: NextRequest, { params }: { params: { userId: string } }) {
-	const userId = parseInt(params.userId, 10);
-	
-	if (isNaN(userId)) {
-		return NextResponse.json({ error: "Invalid userId" }, { status: 400 });
-	}
-	
+export async function POST(request: NextRequest, context: { params: { userId: string } }) {
 	try {
+		const resolvedParams = await context.params;
+		const userId = parseInt(resolvedParams.userId, 10);
+		
+		if (isNaN(userId)) {
+			return NextResponse.json({ error: "Invalid userId" }, { status: 400 });
+		}
 		const { type, sourceAccount, destinationAccount, amount, timestamp } = await request.json();
 		
 		// Validate the incoming data

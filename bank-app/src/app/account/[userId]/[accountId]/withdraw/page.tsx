@@ -10,9 +10,10 @@ interface Account {
   balance: number;
 }
 
-export default function Withdraw({ params }: { params: { userId: string, accountId: string } }) {
+export default function Withdraw({ params }: { params: Promise<{ userId: string, accountId: string }> }) {
 	const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 	const [amount, setAmount] = useState('');
+	const [resolvedParams, setResolvedParams] = useState<{ userId: string; accountId: string } | null>(null);
 	const [showTransactionPrompt, setShowTransactionPrompt] = useState(false);
 	const [showLogoutMessage, setShowLogoutMessage] = useState(false);
 	const router = useRouter();
@@ -20,21 +21,24 @@ export default function Withdraw({ params }: { params: { userId: string, account
 	useEffect(() => {
 		const fetchAccount = async () => {
 			try {
-				const response = await axios.get<Account>(`/api/accounts/${params.userId}/${params.accountId}`);
+				const resolved = await params;
+				setResolvedParams(resolved);
+
+				const response = await axios.get<Account>(`/api/accounts/${resolved.userId}/${resolved.accountId}`);
 				setSelectedAccount(response.data);
 			} catch (error) {
 				console.error('Error fetching account:', error);
 			}
 		}
 		fetchAccount();
-	}, [params.userId, params.accountId]);
+	}, [params]);
 
 	const handleWithdraw = async () => {
 		const withdrawAmount = parseFloat(amount);
 
-		if (!isNaN(withdrawAmount) && withdrawAmount > 0 && selectedAccount) {
+		if (resolvedParams && !isNaN(withdrawAmount) && withdrawAmount > 0 && selectedAccount) {
 			try {
-				const response = await axios.put(`/api/accounts/${params.userId}/${params.accountId}/withdraw`, { amount: withdrawAmount });
+				const response = await axios.put(`/api/accounts/${resolvedParams.userId}/${resolvedParams.accountId}/withdraw`, { amount: withdrawAmount });
 				setSelectedAccount((prev) => prev && { ...prev, balance: prev.balance - withdrawAmount });
 				setAmount('');
 				
@@ -48,7 +52,7 @@ export default function Withdraw({ params }: { params: { userId: string, account
 
 				console.log("Transaction Data Being Sent:", transactionData);
 
-				const createTransaction = await axios.post(`/api/accounts/${params.userId}/history`, transactionData);
+				const createTransaction = await axios.post(`/api/accounts/${resolvedParams.userId}/history`, transactionData);
 
 				alert('Withdraw successful!');
 				setShowTransactionPrompt(true);

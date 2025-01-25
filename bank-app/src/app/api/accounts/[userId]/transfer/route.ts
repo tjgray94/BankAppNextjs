@@ -3,30 +3,35 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function PUT(request: NextRequest, { params }: { params: {userId: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { userId: string } }) {
 	try {
-		const { userId } = params;
+		const { userId } = await params;
+		console.log("user id:", userId);
 		const body = await request.json();
 		const { sourceAccountId, destinationAccountId, amount } = body;
+		console.log("Request body:", body);
 
-		if(!amount || isNaN(amount) || amount <= 0) {
+		if(!amount || isNaN(amount) || parseFloat(amount) <= 0) {
 			return NextResponse.json({ error: "Invalid transfer amount" }, { status: 400 });
 		} 
 
 		if(!destinationAccountId) {
+			console.log("Destination account ID missing");
 			return NextResponse.json({ error: "Destination account ID is required" }, { status: 400 });
 		}
 
 		const sourceAccount =  await prisma.account.findFirst({
 			where: {
-				accountId: parseInt(sourceAccountId),
-				userId: parseInt(userId)
+				accountId: parseInt(sourceAccountId, 10),
+				userId: parseInt(userId, 10)
 			}
 		})
+		console.log("Source account fetched:", sourceAccount);
 
 		const destinationAccount = await prisma.account.findFirst({
-			where: { accountId: parseInt(destinationAccountId) }
+			where: { accountId: parseInt(destinationAccountId, 10) }
 		});
+		console.log("Destination account fetched:", destinationAccount);
 		
 		if (!sourceAccount) {
 			return NextResponse.json({ error: "Source account not found." }, { status: 404 });

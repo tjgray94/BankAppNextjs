@@ -10,39 +10,74 @@ interface Account {
 	balance: number;
 }
 
-export default function UserAccountPage({ params }: { params: { userId: string, accountId: string } }) {
+export default function UserAccountPage({ params }: { params: Promise<{ userId: string, accountId: string }> }) {
+	const [accounts, setAccounts] = useState<Account[]>([]);
 	const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+	const [resolvedParams, setResolvedParams] = useState<{ userId: string; accountId: string } | null>(null);
+	const [showLogoutMessage, setShowLogoutMessage] = useState(false);
 	const router = useRouter();
 
 	useEffect(() => {
 		const fetchAccountBalance = async () => {
 			try {
-				const response = await axios.get<Account>(`/api/accounts/${params.userId}/${params.accountId}`);
+				const resolved = await params;
+				setResolvedParams(resolved);
+
+				const response = await axios.get<Account>(`/api/accounts/${resolved.userId}/${resolved.accountId}`);
 				setSelectedAccount(response.data);
+
+				const allAccountsResponse = await axios.get<Account[]>(`/api/accounts/${resolved.userId}`);
+				setAccounts(allAccountsResponse.data);
 			} catch (error) {
 				console.error('Error fetching account balance:', error);
 			}
 		};
 
 		fetchAccountBalance();
-  }, [params.userId, params.accountId]);
+  }, [params]);
 
 	const depositScreen = () => {
-		router.push(`/account/${params.userId}/${params.accountId}/deposit`)
+		if (resolvedParams) {
+			router.push(`/account/${resolvedParams.userId}/${resolvedParams.accountId}/deposit`)
+		}
 	}
 
 	const withdrawScreen = () => {
-		router.push(`/account/${params.userId}/${params.accountId}/withdraw`)
+		if (resolvedParams) {
+			router.push(`/account/${resolvedParams.userId}/${resolvedParams.accountId}/withdraw`)
+		}
 	}
 
 	const transferScreen = () => {
-		router.push(`/account/${params.userId}/transfer`)
+		if (resolvedParams) {
+			router.push(`/account/${resolvedParams.userId}/transfer`)
+		}
 	}
+
+	const logout = async () => {
+    try {
+      setShowLogoutMessage(true);
+      await axios.get('/api/logout');
+      setTimeout(() => {      
+        router.push('/login');
+      }, 5000);
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  }
+
+	if (showLogoutMessage) {
+    return (
+      <div style={{ textAlign: 'center', marginTop: '50px', fontSize: '24px', color: 'white' }}>
+        Thank you for banking with BankApp
+      </div>
+    );
+  }
 
 	return (
 		<div className="min-h-screen bg-gray-900 text-white flex flex-col justify-between">
 			<header className="border-b border-slate-700 p-4">
-				<h1 className="text-xl font-semibold">Details for Account ID: {params.accountId}</h1>
+				<h1 className="text-xl font-semibold">{resolvedParams ? `Details for Account ID: ${resolvedParams.accountId}` : 'Loading'}</h1>
 			</header>
 
 			<main className="flex-grow p-6">
@@ -59,13 +94,15 @@ export default function UserAccountPage({ params }: { params: { userId: string, 
 					<div className="flex flex-wrap gap-4">
 						<button onClick={depositScreen} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Deposit</button>
 						<button onClick={withdrawScreen} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Withdraw</button>
-						<button onClick={transferScreen} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Transfer</button>
+						{accounts.length > 1 && (
+							<button onClick={transferScreen} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Transfer</button>
+						)}
 					</div>
 				</div>
 			</main>
 
 			<footer className="border-t border-slate-700 p-4 flex justify-between">
-				<button className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">Logout</button>
+				<button onClick={logout} className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">Logout</button>
 				<button onClick={() => router.back()} className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">Back</button>
 			</footer>
 		</div>

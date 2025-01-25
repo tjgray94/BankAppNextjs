@@ -106,7 +106,7 @@ export default function SignupPage() {
           </div>
           {/* PIN */}
           <div className="relative z-0 w-full mb-5 group">
-            <input type="number" 
+            <input type="password" 
               {...methods.register("pin", {
                 required: "PIN is required",
                 minLength: { value: 4, message: "PIN must be exactly 4 digits" },

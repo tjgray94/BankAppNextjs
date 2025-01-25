@@ -10,9 +10,10 @@ interface Account {
   balance: number;
 }
 
-export default function Deposit({ params }: { params: { userId: string, accountId: string } }) {
+export default function Deposit({ params }: { params: Promise<{ userId: string, accountId: string }> }) {
 	const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 	const [amount, setAmount] = useState('');
+	const [resolvedParams, setResolvedParams] = useState<{ userId: string; accountId: string } | null>(null);
 	const [showTransactionPrompt, setShowTransactionPrompt] = useState(false);
 	const [showLogoutMessage, setShowLogoutMessage] = useState(false);
 	const router = useRouter();
@@ -20,21 +21,24 @@ export default function Deposit({ params }: { params: { userId: string, accountI
 	useEffect(() => {
 		const fetchAccount = async () => {
 			try {
-				const response = await axios.get<Account>(`/api/accounts/${params.userId}/${params.accountId}`);
+				const resolved = await params;
+				setResolvedParams(resolved);
+
+				const response = await axios.get<Account>(`/api/accounts/${resolved.userId}/${resolved.accountId}`);
 				setSelectedAccount(response.data);
 			} catch (error) {
 				console.error('Error fetching account:', error);
 			}
 		}
 		fetchAccount();
-	}, [params.userId, params.accountId]);
+	}, [params]);
 
 	const handleDeposit = async () => {
 		const depositAmount = parseFloat(amount);
 
-		if (!isNaN(depositAmount) && depositAmount > 0 && selectedAccount) {
+		if (resolvedParams && !isNaN(depositAmount) && depositAmount > 0 && selectedAccount) {
 			try {
-				const response = await axios.put(`/api/accounts/${params.userId}/${params.accountId}/deposit`, { amount: depositAmount });
+				const response = await axios.put(`/api/accounts/${resolvedParams.userId}/${resolvedParams.accountId}/deposit`, { amount: depositAmount });
 				setSelectedAccount((prev) => prev && { ...prev, balance: prev.balance + depositAmount });
 				setAmount('');
 				
@@ -48,7 +52,7 @@ export default function Deposit({ params }: { params: { userId: string, accountI
 
 				console.log("Transaction Data Being Sent:", transactionData);
 
-				const createTransaction = await axios.post(`/api/accounts/${params.userId}/history`, transactionData);
+				const createTransaction = await axios.post(`/api/accounts/${resolvedParams.userId}/history`, transactionData);
 
 				alert('Deposit successful!');
 				setShowTransactionPrompt(true);

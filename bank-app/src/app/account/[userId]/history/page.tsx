@@ -19,17 +19,21 @@ interface Transaction {
   timestamp: string;
 }
 
-export default function UserHistoryPage({ params }: { params: { userId: string } }) {
+export default function UserHistoryPage({ params }: { params: Promise<{ userId: string }> }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [showLogoutMessage, setShowLogoutMessage] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const response = await axios.get<Transaction[]>(`/api/accounts/${params.userId}/history`);
+        const resolvedParams = await params;
+        const userId = resolvedParams.userId;
+        setResolvedUserId(userId);
+        const response = await axios.get<Transaction[]>(`/api/accounts/${userId}/history`);
         setTransactions(response.data);
       } catch (err) {
         console.error('Error fetching transaction history:', err);
@@ -40,7 +44,7 @@ export default function UserHistoryPage({ params }: { params: { userId: string }
     };
 
     fetchTransactions();
-  }, [params.userId]);
+  }, [params]);
 
   if (loading) {
     return <p>Loading...</p>;
@@ -73,7 +77,7 @@ export default function UserHistoryPage({ params }: { params: { userId: string }
 	return (
 		<div className="min-h-screen bg-gray-900 text-white flex flex-col">
       <header className="border-b border-slate-700 p-4 flex justify-between items-center">
-        <h1 className="text-lg font-semibold">Transaction History for User ID: {params.userId}</h1>
+        <h1 className="text-lg font-semibold">{resolvedUserId ? `Transaction History for User ID: ${resolvedUserId}` : ' '}</h1>
         <div className="flex gap-4">
           <button onClick={logout} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500">Logout</button>
           <button onClick={() => router.back()} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 focus:ring-2 focus:ring-gray-500">Back</button>
